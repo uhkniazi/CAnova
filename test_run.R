@@ -42,7 +42,7 @@ for (i in 2:length(coef(fit))){
   arrows(x.start, y.start, x.start, y.end, code=0, lwd=2, angle=50)
 }
 
-########## sum of squares
+########## total sum of squares
 calculateSST = function(dat){
   return(var(dat)*(length(dat)-1))
 }
@@ -58,7 +58,7 @@ for (i in seq_along(ivDat)){
   lines(c(x.start, x.end), c(y.start, y.end), lty=2, col=col.dat[i])
 }
 
-
+########## sum of squares for model
 calculateSSM = function(dat, grp){
   x.grand = mean(dat)
   x.grp = tapply(dat, grp, mean)
@@ -87,4 +87,65 @@ for (i in seq_along(ivDat)){
   x.start = i
   x.end = i
   lines(c(x.start, x.end), c(y.start, y.end), lty=2, col=col.dat[i])
+}
+
+
+########## residuals sum of squares
+calculateSSR = function(dat, grp){
+  x.grp = tapply(dat, grp, mean)
+  #x.len = tapply(dat, grp, length)
+  ssr = rep(NA, times=length(x.grp))
+  for (i in seq_along(x.grp)){
+    l = names(x.grp)[i]
+    d = dat[grp == l]
+    s = (d - x.grp[i])^2
+    s = sum(s)
+    ssr[i] = s
+  }
+  return(sum(ssr))
+}
+
+plot(1:length(ivDat), ivDat, col=col.dat, xaxt='n', xlab='Index', ylab='Value')
+axis(side = 1, at = 1:length(ivDat))
+abline(h = grand.mean)
+sapply(seq_along(grp.mean), function(x) {
+  y.len = rep(grp.mean[x], times=grp.size[x])
+  x.len = which(fGroups == levels(fGroups)[x])
+  lines(x.len, y.len, col=col.type[x])  
+} )
+
+y.end = rep(grp.mean, times=grp.size)
+for (i in seq_along(ivDat)){
+  y.start = ivDat[i]
+  x.start = i
+  x.end = i
+  lines(c(x.start, x.end), c(y.start, y.end[i]), lty=2, col=col.dat[i])
+}
+
+######### calculate mean squares
+calculateMeanSquaresM = function(dat, grp){
+  ssm = calculateSSM(dat, grp)
+  df = length(levels(grp)) - 1
+  return(ssm/df)
+}
+
+calculateMeanSquaresR = function(dat, grp){
+  ssr = calculateSSR(dat, grp)
+  df = tapply(dat, grp, length)
+  df = sum(df - 1)
+  return(ssr/df)
+}
+
+getFRatio = function(dat, grp){
+  msm = calculateMeanSquaresM(dat, grp)
+  msr = calculateMeanSquaresR(dat, grp)
+  return(msm/msr)
+}
+
+getPValue = function(dat, grp){
+  f = getFRatio(dat, grp)
+  d1 = length(levels(grp)) - 1
+  d2 = tapply(dat, grp, length)
+  d2 = sum(d2 - 1)
+  return(1-pf(f, d1, d2))
 }
